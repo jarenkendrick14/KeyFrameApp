@@ -3,6 +3,7 @@ import 'notifications_screen.dart';
 import 'personal_info_screen.dart';
 import 'payment_methods_screen.dart';
 import 'security_screen.dart';
+import 'wishlist_screen.dart';
 import '../support/report_issue_screen.dart';
 import '../support/feedback_screen.dart';
 import '../support/system_error_screen.dart';
@@ -62,6 +63,8 @@ class ProfilePage extends StatelessWidget {
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SecurityPage()))),
               _buildProfileItem(context, Icons.notifications_none, "Notifications",
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage()))),
+              _buildProfileItem(context, Icons.favorite_border, "My Wishlist",
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistPage()))),
               _buildProfileItem(context, Icons.warning_amber_rounded, "Test Error Page",
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ErrorPage()))),
               _buildProfileItem(context, Icons.bug_report_outlined, "Report Issue",

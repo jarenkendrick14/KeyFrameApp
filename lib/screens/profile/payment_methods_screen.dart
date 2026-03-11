@@ -82,7 +82,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                         onTap: () => setDialogState(() => selectedType = type),
                         child: Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: isSelected ? const Color(0xFF8C44FF).withOpacity(0.2) : Colors.black26,

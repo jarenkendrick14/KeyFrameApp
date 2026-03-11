@@ -5,6 +5,7 @@ import '../profile/profile_screen.dart';
 import '../../services/product_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
+import '../support/system_error_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,6 +21,8 @@ class _HomePageState extends State<HomePage> {
   List<Product> products = [];
   Set<String> wishlistIds = {};
   bool _isLoading = true;
+  bool _hasError = false;
+  String _errorMessage = '';
 
   @override
   void initState() {
@@ -49,10 +52,11 @@ class _HomePageState extends State<HomePage> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load products: $e'), backgroundColor: Colors.red),
-        );
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        });
       }
     }
   }
@@ -66,7 +70,15 @@ class _HomePageState extends State<HomePage> {
     }).toList();
 
     return Scaffold(
-      body: SafeArea(
+      body: _hasError
+          ? ErrorPage(
+              errorMessage: _errorMessage,
+              onRetry: () {
+                setState(() { _hasError = false; _isLoading = true; });
+                _loadData();
+              },
+            )
+          : SafeArea(
         bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

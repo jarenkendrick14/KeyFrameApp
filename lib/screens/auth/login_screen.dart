@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../dashboard/dashboard_screen.dart';
 import 'register_screen.dart';
 import '../../services/auth_service.dart';
+import '../support/system_error_screen.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -33,7 +34,17 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DashboardPage()));
       }
     } catch (e) {
-      setState(() => _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg.contains('Network error') || msg.contains('Database connection')) {
+        if (mounted) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => ErrorPage(
+            errorMessage: "Cannot connect to server.\nMake sure MySQL and the API server are running.",
+            onRetry: () { Navigator.pop(context); },
+          )));
+        }
+      } else {
+        setState(() => _errorMessage = msg);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
