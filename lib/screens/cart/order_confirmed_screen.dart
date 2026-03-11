@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class OrderSuccessPage extends StatelessWidget {
-  const OrderSuccessPage({super.key});
+  final String orderNumber;
+  const OrderSuccessPage({super.key, this.orderNumber = '#KF-00000'});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +24,7 @@ class OrderSuccessPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10)),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Text("Order ID", style: TextStyle(color: Colors.grey)), SizedBox(width: 100), Text("#KG-8821", style: TextStyle(fontWeight: FontWeight.bold))]),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [const Text("Order ID", style: TextStyle(color: Colors.grey)), const SizedBox(width: 100), Text(orderNumber, style: const TextStyle(fontWeight: FontWeight.bold))]),
             ),
             const SizedBox(height: 40),
             SizedBox(

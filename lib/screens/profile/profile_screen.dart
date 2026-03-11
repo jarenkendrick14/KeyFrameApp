@@ -1,37 +1,44 @@
 import 'package:flutter/material.dart';
 import 'notifications_screen.dart';
+import 'personal_info_screen.dart';
+import 'payment_methods_screen.dart';
+import 'security_screen.dart';
 import '../support/report_issue_screen.dart';
 import '../support/feedback_screen.dart';
 import '../support/system_error_screen.dart';
 import '../auth/login_screen.dart';
+import '../../services/auth_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService().currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Profile", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-        actions: [IconButton(icon: const Icon(Icons.settings), onPressed: () {})],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          // Added 120px padding at the bottom to clear the Navigation Bar
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           child: Column(
             children: [
-              // Profile Picture
-              const Hero(
+              Hero(
                 tag: 'profile_avatar',
                 child: CircleAvatar(
                   radius: 50,
-                  backgroundImage: AssetImage('assets/profile_user.jpg'),
+                  backgroundColor: const Color(0xFF8C44FF),
+                  child: Text(
+                    _getInitials(user?.fullName ?? 'G'),
+                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              const Text("Kai Cenat", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const Text("kai.gamer@example.com", style: TextStyle(color: Colors.grey)),
+              Text(user?.fullName ?? "Guest", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(user?.email ?? "", style: const TextStyle(color: Colors.grey)),
               const SizedBox(height: 16),
               Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -40,14 +47,19 @@ class ProfilePage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.purpleAccent)
                   ),
-                  child: const Text("PRO MEMBER", style: TextStyle(color: Colors.purpleAccent, fontSize: 10, fontWeight: FontWeight.bold))
+                  child: Text(
+                    "${user?.membershipTier ?? 'STANDARD'} MEMBER",
+                    style: const TextStyle(color: Colors.purpleAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                  )
               ),
               const SizedBox(height: 30),
 
-              // Settings Items
-              _buildProfileItem(context, Icons.person_outline, "Personal Information"),
-              _buildProfileItem(context, Icons.credit_card, "Payment Methods"),
-              _buildProfileItem(context, Icons.shield_outlined, "Security"),
+              _buildProfileItem(context, Icons.person_outline, "Personal Information",
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PersonalInfoPage()))),
+              _buildProfileItem(context, Icons.credit_card, "Payment Methods",
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentMethodsPage()))),
+              _buildProfileItem(context, Icons.shield_outlined, "Security",
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SecurityPage()))),
               _buildProfileItem(context, Icons.notifications_none, "Notifications",
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage()))),
               _buildProfileItem(context, Icons.warning_amber_rounded, "Test Error Page",
@@ -59,9 +71,11 @@ class ProfilePage extends StatelessWidget {
 
               const SizedBox(height: 30),
 
-              // Sign Out Button
               TextButton.icon(
-                onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage())),
+                onPressed: () {
+                  AuthService().logout();
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                },
                 icon: const Icon(Icons.logout, color: Colors.red),
                 label: const Text("Sign Out", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
               )
@@ -90,5 +104,13 @@ class ProfilePage extends StatelessWidget {
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       ),
     );
+  }
+
+  static String _getInitials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name.isNotEmpty ? name[0].toUpperCase() : 'G';
   }
 }

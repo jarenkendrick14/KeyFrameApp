@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/product_model.dart';
 import '../services/cart_service.dart';
 import '../profile/profile_screen.dart';
+import '../../services/product_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,11 +16,50 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String selectedCategory = 'All';
   String searchQuery = "";
-  final List<String> categories = ['All', 'Keyboard', 'Keycaps', 'Accessories'];
+  List<String> categories = ['All'];
+  List<Product> products = [];
+  Set<String> wishlistIds = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final fetched = await ProductService().getProducts();
+      final cats = await ProductService().getCategories();
+      // Load wishlist
+      final userId = AuthService().currentUser?.userId;
+      if (userId != null) {
+        try {
+          final wishlistResponse = await ApiService().get('wishlist/$userId');
+          final wl = (wishlistResponse as List).map((w) => w['product_id'].toString()).toSet();
+          wishlistIds = wl;
+        } catch (_) {}
+      }
+      if (mounted) {
+        setState(() {
+          products = fetched;
+          categories = cats;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load products: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final filteredProducts = mockProducts.where((product) {
+    final filteredProducts = products.where((product) {
       final matchesCategory = selectedCategory == 'All' || product.category == selectedCategory;
       final matchesSearch = product.name.toLowerCase().contains(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
@@ -35,20 +77,29 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("WELCOME BACK", style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1.2)),
-                      Text("SHOP KEYBOARDS", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFD033FF))),
+                      const Text("WELCOME BACK", style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1.2)),
+                      Text(
+                        AuthService().currentUser != null
+                            ? "HI, ${AuthService().currentUser!.fullName.toUpperCase()}"
+                            : "SHOP KEYBOARDS",
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFD033FF)),
+                      ),
                     ],
                   ),
                   GestureDetector(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())),
-                    child: const Hero(
+                    child: Hero(
                       tag: 'profile_avatar',
                       child: CircleAvatar(
                         radius: 20,
-                        backgroundImage: AssetImage('assets/profile_user.jpg'),
+                        backgroundColor: const Color(0xFF8C44FF),
+                        child: Text(
+                          _getInitials(AuthService().currentUser?.fullName ?? 'G'),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
                       ),
                     ),
                   ),
@@ -106,32 +157,56 @@ class _HomePageState extends State<HomePage> {
 
             // --- PRODUCT GRID ---
             Expanded(
-              child: filteredProducts.isEmpty
-                  ? const Center(child: Text("No products found", style: TextStyle(color: Colors.grey)))
-                  : GridView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: filteredProducts.length,
-                itemBuilder: (context, index) {
-                  return _ProductCard(product: filteredProducts[index]);
-                },
-              ),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF8C44FF)))
+                  : filteredProducts.isEmpty
+                      ? const Center(child: Text("No products found", style: TextStyle(color: Colors.grey)))
+                      : GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.75,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                          itemCount: filteredProducts.length,
+                          itemBuilder: (context, index) {
+                            return _ProductCard(
+                              product: filteredProducts[index],
+                              isFavorited: wishlistIds.contains(filteredProducts[index].id),
+                              onFavoriteToggle: (isFav) {
+                                setState(() {
+                                  if (isFav) {
+                                    wishlistIds.add(filteredProducts[index].id);
+                                  } else {
+                                    wishlistIds.remove(filteredProducts[index].id);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
             )
           ],
         ),
       ),
     );
   }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name.isNotEmpty ? name[0].toUpperCase() : 'G';
+  }
 }
 
 class _ProductCard extends StatefulWidget {
   final Product product;
-  const _ProductCard({required this.product});
+  final bool isFavorited;
+  final Function(bool) onFavoriteToggle;
+  const _ProductCard({required this.product, required this.isFavorited, required this.onFavoriteToggle});
 
   @override
   State<_ProductCard> createState() => _ProductCardState();
@@ -140,15 +215,22 @@ class _ProductCard extends StatefulWidget {
 class _ProductCardState extends State<_ProductCard> {
   double _buttonScale = 1.0;
   double _heartScale = 1.0;
-  bool _isFavorited = false;
 
-  void _toggleFavorite() {
-    setState(() {
-      _isFavorited = !_isFavorited;
-      _heartScale = 1.5; // Pulse up
-    });
+  void _toggleFavorite() async {
+    final userId = AuthService().currentUser?.userId;
+    if (userId == null) return;
+
+    try {
+      await ApiService().post('wishlist/toggle', {
+        'user_id': userId,
+        'product_id': widget.product.id,
+      });
+      widget.onFavoriteToggle(!widget.isFavorited);
+    } catch (_) {}
+
+    setState(() => _heartScale = 1.5);
     Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) setState(() => _heartScale = 1.0); // Pulse back
+      if (mounted) setState(() => _heartScale = 1.0);
     });
   }
 
@@ -177,9 +259,9 @@ class _ProductCardState extends State<_ProductCard> {
                     backgroundColor: Colors.black45,
                     radius: 16,
                     child: Icon(
-                        _isFavorited ? Icons.favorite : Icons.favorite_border,
+                        widget.isFavorited ? Icons.favorite : Icons.favorite_border,
                         size: 18,
-                        color: _isFavorited ? Colors.redAccent : Colors.white
+                        color: widget.isFavorited ? Colors.redAccent : Colors.white
                     )
                 ),
               ),
@@ -204,14 +286,10 @@ class _ProductCardState extends State<_ProductCard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // PHP Pesos Currency
                       Text("₱${widget.product.price.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-
-                      // --- PLUS BUTTON WITH INSTANT ANIMATION ---
-                      // We use Listener + GestureDetector for the most responsive feel
                       Listener(
-                        onPointerDown: (_) => setState(() => _buttonScale = 0.6), // Instant shrink
-                        onPointerUp: (_) => setState(() => _buttonScale = 1.0),  // Instant grow
+                        onPointerDown: (_) => setState(() => _buttonScale = 0.6),
+                        onPointerUp: (_) => setState(() => _buttonScale = 1.0),
                         child: GestureDetector(
                           onTap: () {
                             CartService().addToCart(widget.product);

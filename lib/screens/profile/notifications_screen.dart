@@ -1,24 +1,65 @@
 import 'package:flutter/material.dart';
+import '../models/notification_model.dart';
+import '../../services/notification_service.dart';
+import '../../services/auth_service.dart';
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
+
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  List<AppNotification> _notifications = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    final userId = AuthService().currentUser?.userId;
+    if (userId == null) return;
+
+    try {
+      final notifications = await NotificationService().getNotifications(userId);
+      if (mounted) {
+        setState(() {
+          _notifications = notifications;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Notifications"), actions: [TextButton(onPressed: (){}, child: const Text("Mark all as read"))]),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: const [
-          Text("TODAY", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
-          SizedBox(height: 10),
-          NotificationTile(icon: Icons.local_shipping, color: Colors.blue, title: "Order Shipped", desc: "Your keyboard 'Cyber Mech X1' has been shipped.", time: "2H AGO", isUnread: true),
-          NotificationTile(icon: Icons.local_offer, color: Colors.green, title: "Flash Sale Alert", desc: "50% off on all Keycaps this weekend only!", time: "5H AGO", isUnread: true),
-          SizedBox(height: 20),
-          Text("YESTERDAY", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
-          SizedBox(height: 10),
-          NotificationTile(icon: Icons.chat_bubble_outline, color: Colors.orange, title: "Support Reply", desc: "We responded to ticket #9281.", time: "1D AGO", isUnread: false),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF8C44FF)))
+          : _notifications.isEmpty
+              ? const Center(child: Text("No notifications", style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: _notifications.length,
+                  itemBuilder: (context, index) {
+                    final notif = _notifications[index];
+                    return NotificationTile(
+                      icon: notif.iconData,
+                      color: notif.colorValue,
+                      title: notif.title,
+                      desc: notif.message,
+                      time: notif.timeAgo,
+                      isUnread: !notif.isRead,
+                    );
+                  },
+                ),
     );
   }
 }

@@ -2,8 +2,19 @@ import 'package:flutter/material.dart';
 import '../services/cart_service.dart';
 import 'review_order_screen.dart';
 
-class BagPage extends StatelessWidget {
+class BagPage extends StatefulWidget {
   const BagPage({super.key});
+
+  @override
+  State<BagPage> createState() => _BagPageState();
+}
+
+class _BagPageState extends State<BagPage> {
+  @override
+  void initState() {
+    super.initState();
+    CartService().loadCart();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +47,6 @@ class BagPage extends StatelessWidget {
           // FILLED STATE
           return Scaffold(
             appBar: AppBar(title: Text("My Bag (${CartService().itemCount})"), centerTitle: true),
-            // Using Column + Expanded ensures the list takes available space
-            // and the Checkout section sits at the bottom, above the nav bar.
             body: Column(
               children: [
                 Expanded(
@@ -54,7 +63,6 @@ class BagPage extends StatelessWidget {
                         decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(16)),
                         child: Row(
                           children: [
-                            // IMAGE (Using Asset now)
                             ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
                                 child: Image.asset(
@@ -68,7 +76,6 @@ class BagPage extends StatelessWidget {
                                 )
                             ),
                             const SizedBox(width: 16),
-                            // INFO & QUANTITY
                             Expanded(
                               child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,9 +86,7 @@ class BagPage extends StatelessWidget {
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text("\₱${product.price}", style: const TextStyle(color: Color(0xFF8C44FF), fontWeight: FontWeight.bold, fontSize: 16)),
-
-                                        // QUANTITY CONTROLS
+                                        Text("₱${product.price}", style: const TextStyle(color: Color(0xFF8C44FF), fontWeight: FontWeight.bold, fontSize: 16)),
                                         Container(
                                           decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
                                           child: Row(
@@ -116,7 +121,7 @@ class BagPage extends StatelessWidget {
 
                 // CHECKOUT SECTION
                 Container(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 100), // Bottom padding 100 prevents Nav Bar overlap
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                   decoration: const BoxDecoration(
                       color: Color(0xFF0A0A0A),
                       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -125,9 +130,9 @@ class BagPage extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("Subtotal", style: TextStyle(color: Colors.grey)), Text("\₱${CartService().subtotal.toStringAsFixed(2)}")]),
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("Subtotal", style: TextStyle(color: Colors.grey)), Text("₱${CartService().subtotal.toStringAsFixed(2)}")]),
                       const SizedBox(height: 10),
-                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("Total", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), Text("\₱${CartService().total.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))]),
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("Total", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), Text("₱${CartService().total.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))]),
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,

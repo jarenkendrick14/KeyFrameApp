@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
+import '../../services/feedback_service.dart';
 
 class ReportIssuePage extends StatefulWidget {
   const ReportIssuePage({super.key});
@@ -8,13 +10,42 @@ class ReportIssuePage extends StatefulWidget {
 }
 
 class _ReportIssuePageState extends State<ReportIssuePage> {
-  // Variable to store the currently selected issue
   String _selectedIssue = "";
+  final _detailsController = TextEditingController();
+  bool _isSending = false;
 
   void _handleSelection(String issue) {
-    setState(() {
-      _selectedIssue = issue;
-    });
+    setState(() => _selectedIssue = issue);
+  }
+
+  Future<void> _submitReport() async {
+    if (_selectedIssue.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please select an issue type")));
+      return;
+    }
+    final details = _detailsController.text.trim();
+    if (details.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please describe the issue")));
+      return;
+    }
+
+    final userId = AuthService().currentUser?.userId;
+    if (userId == null) return;
+
+    setState(() => _isSending = true);
+
+    try {
+      await FeedbackService().submitIssueReport(userId, _selectedIssue, details);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Report submitted!"), backgroundColor: Color(0xFF8C44FF)));
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed: $e"), backgroundColor: Colors.red));
+        setState(() => _isSending = false);
+      }
+    }
   }
 
   @override
@@ -46,7 +77,11 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
             const SizedBox(height: 30),
             const Text("DETAILS", style: TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 10),
-            const TextField(maxLines: 5, decoration: InputDecoration(hintText: "Please describe the issue in detail...")),
+            TextField(
+              controller: _detailsController,
+              maxLines: 5,
+              decoration: const InputDecoration(hintText: "Please describe the issue in detail..."),
+            ),
             const SizedBox(height: 30),
             const Text("SCREENSHOTS (OPTIONAL)", style: TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 10),
@@ -55,9 +90,11 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
             SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _isSending ? null : _submitReport,
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black),
-                    child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text("Submit Report"), SizedBox(width: 8), Icon(Icons.send, size: 16)])
+                    child: _isSending
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text("Submit Report"), SizedBox(width: 8), Icon(Icons.send, size: 16)])
                 )
             )
           ],
